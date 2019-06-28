@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gotrue.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "gotrue.name" . }}
+    helm.sh/chart: {{ include "gotrue.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "gotrue.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "gotrue.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: gotrue
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /settings
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /settings
+              port: 8080
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: GOTRUE_SITE_URL
+              value: {{ .Values.gotrue.siteUrl | quote }}
+            
+            - name: GOTRUE_API_PORT
+              value: "8080"
+
+            - name: GOTRUE_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "gotrue.secretName" . }}
+                  key: jwt-secret
+
+            - name: GOTRUE_JWT_EXP
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "gotrue.secretName" . }}
+                  key: jwt-expire
+
+            - name: GOTRUE_JWT_AUD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "gotrue.secretName" . }}
+                  key: jwt-audience
+
+            - name: GOTRUE_DISABLE_SIGNUP
+              value: {{ .Values.gotrue.disableSignup | quote }}
+            
+            - name: GOTRUE_LOG_LEVEL
+              value: {{ .Values.gotrue.logLevel | quote }}
+            
+            - name: GOTRUE_DB_DRIVER
+              value: {{ .Values.gotrue.database.driver | quote }}
+            
+            - name: GOTRUE_DB_DATABASE_URL
+              value: {{ .Values.gotrue.database.uri | quote }}
+            
+            - name: GOTRUE_SMTP_HOST
+              value: {{ .Values.gotrue.email.smtp.host | quote }}
+            
+            - name: GOTRUE_SMTP_PORT
+              value: {{ .Values.gotrue.email.smtp.port | quote }}
+            
+            - name: GOTRUE_SMTP_USER
+              value: {{ .Values.gotrue.email.smtp.username | quote }}
+            
+            - name: GOTRUE_SMTP_PASS
+              value: {{ .Values.gotrue.email.smtp.password | quote }}
+            
+            - name: GOTRUE_SMTP_ADMIN_EMAIL
+              value: {{ .Values.gotrue.email.smtp.adminEmail | quote }}
+            
+            - name: GOTRUE_SMTP_MAX_FREQUENCY
+              value: {{ .Values.gotrue.email.smtp.maxFrequency | quote }}
+            
+            - name: GOTRUE_MAILER_SUBJECTS_CONFIRMATION
+              value: {{ .Values.gotrue.email.subjects.confirmation | quote }}
+            
+            - name: GOTRUE_MAILER_SUBJECTS_INVITE
+              value: {{ .Values.gotrue.email.subjects.invite | quote }}
+            
+            - name: GOTRUE_MAILER_SUBJECTS_RECOVERY
+              value: {{ .Values.gotrue.email.subjects.recovery | quote }}
+            
+            - name: GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE
+              value: {{ .Values.gotrue.email.subjects.emailChange | quote }}
+                        
+            - name: GOTRUE_OPERATOR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "gotrue.secretName" . }}
+                  key: operator-token
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
